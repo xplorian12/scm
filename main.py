@@ -12,7 +12,7 @@ from flask import Flask
 
 # === Initialize Dash App ===
 server = Flask(__name__)
-app = Dash(__name__)
+app = Dash(__name__, server=server)
 app.title = "SCM Globe JSON Comparator"
 
 # === Global State for Mappings and Results ===
