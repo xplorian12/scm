@@ -8,8 +8,10 @@ from deepdiff import DeepDiff
 from dash.dependencies import ALL
 from dash import no_update
 import dash
+from flask import Flask
 
 # === Initialize Dash App ===
+server = Flask(__name__)
 app = Dash(__name__)
 app.title = "SCM Globe JSON Comparator"
 
@@ -374,4 +376,5 @@ def show_selected_result(selected_file):
 
 # === Run App ===
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
