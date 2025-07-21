@@ -140,6 +140,25 @@ def describe_change(path, change):
 
     if path == "root['attrs']['name']":
         return f"{describe_change.counter}. Scenario name changed:\n   - From: \"{from_val}\"\n   - To:   \"{to_val}\""
+        
+    # === Prevent false positives for vehicle name changes due to removals ===
+    if vehicle_match and path.endswith("['attrs']['name']"):
+        # Check if vehicle exists in both base and test
+        base_vehicle = None
+        test_vehicle = None
+        try:
+            base_vehicle = base_data["facilities"][facility_index]["vehicles"][vehicle_index]
+        except: pass
+        try:
+            test_vehicle = test_data["facilities"][facility_index]["vehicles"][vehicle_index]
+        except: pass
+    
+        if base_vehicle and test_vehicle:
+            return f"{describe_change.counter}. Vehicle name changed (at '{facility_name}'):\n   - From: \"{from_val}\"\n   - To:   \"{to_val}\""
+        else:
+            return None  # One side is missing — likely removed or added
+
+    
 
     return f"{describe_change.counter}. Change at {path}:\n   - From: {from_val}\n   - To:   {to_val}"
 
