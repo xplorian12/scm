@@ -153,9 +153,15 @@ def describe_add_remove(path, value, is_addition):
     vehicle_name = get_vehicle_name_by_fac_index(facility_index, vehicle_index) if None not in (facility_index, vehicle_index) else "Unknown Vehicle"
 
     # Detect facility add/remove
-    if "['facilities']" in path and "['attrs']" in path and 'name' in value:
-        name = value['name'] if isinstance(value, dict) else value
+    if "['facilities']" in path and "['attrs']" in path and isinstance(value, dict) and 'name' in value:
+        name = value.get('name', '(Unnamed Facility)')
         return f"{describe_add_remove.counter + 1}. Facility {'added' if is_addition else 'removed'}: \"{name}\""
+    
+    # Detect vehicle add/remove
+    if "['vehicles']" in path and "['attrs']" in path and isinstance(value, dict) and 'name' in value:
+        name = value.get('name', '(Unnamed Vehicle)')
+        return f"{describe_add_remove.counter + 1}. Vehicle {'added' if is_addition else 'removed'}: \"{name}\""
+
 
     # Detect stop changes
     if stop_match and isinstance(value, dict):
