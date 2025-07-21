@@ -163,8 +163,8 @@ def describe_add_remove(path, value, is_addition):
         return f"{describe_add_remove.counter + 1}. Facility {'added' if is_addition else 'removed'}: \"{name}\""
     
     # Detect vehicle add/remove
-    if "['vehicles']" in path and "['attrs']" in path and isinstance(value, dict) and 'name' in value:
-        name = value.get('name', '(Unnamed Vehicle)')
+    if re.match(r"root\['facilities'\]\[\d+\]\['vehicles'\]\[\d+\]$", path) and isinstance(value, dict):
+        name = value.get('attrs', {}).get('name', '(Unnamed Vehicle)')
         return f"{describe_add_remove.counter + 1}. Vehicle {'added' if is_addition else 'removed'}: \"{name}\""
 
 
