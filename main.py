@@ -393,7 +393,7 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
                 lines.append(desc)
                 describe_add_remove.counter += 1
 
-        str_lines = [str(l) for l in lines if l]
+        str_lines = [str(l) for l in lines if isinstance(l, str)]
         change_lists.append(str_lines)
 
         comparison_results[fname] = "\n\n".join(str_lines) if str_lines else "✅ Only differences in ignored fields. No meaningful changes."
