@@ -370,7 +370,7 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
                 lines.append(desc)
                 describe_add_remove.counter += 1
 
-        result = "\n\n".join(lines) if lines else "✅ Only differences in ignored fields. No meaningful changes."
+        result = "\n\n".join([str(l) for l in lines if l]) if lines else "✅ Only differences in ignored fields. No meaningful changes."
         comparison_results[fname] = result
 
     return [{'label': f, 'value': f} for f in uploaded_filenames], uploaded_filenames[0]
