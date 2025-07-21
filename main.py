@@ -59,6 +59,22 @@ def describe_change(path, change):
     from_val = change.get('old_value')
     to_val = change.get('new_value')
 
+# compare uploaded files to each other
+def compare_change_lists(change_lists, filenames, threshold=0.9):
+    warnings = []
+    for i in range(len(change_lists)):
+        for j in range(i+1, len(change_lists)):
+            set_i = set(change_lists[i])
+            set_j = set(change_lists[j])
+            if not set_i or not set_j:
+                continue
+            overlap = len(set_i & set_j) / max(len(set_i), len(set_j))
+            if overlap >= threshold:
+                warnings.append(
+                    f"🚨 Warning: '{filenames[i]}' and '{filenames[j]}' are {round(overlap*100)}% similar in their changes."
+                )
+    return warnings
+
     # Detect indices for context
     facility_match = re.search(r"\['facilities'\]\[(\d+)\]", path)
     vehicle_match = re.search(r"\['vehicles'\]\[(\d+)\]", path)
@@ -335,28 +351,35 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
     comparison_results = {}
     base_data = load_json(os.path.join("base_cases", base_file))
 
+    change_lists = []
+
     for content, fname in zip(uploaded_contents, uploaded_filenames):
-        content_type, content_string = content.split(',')
+        content_string = content.split(',')[1]
         decoded = base64.b64decode(content_string)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='wb') as tmp:
-            tmp.write(decoded)
-            tmp_path = tmp.name
-        test_data = load_json(tmp_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
+            temp_file.write(decoded)
+            temp_path = temp_file.name
+
+        test_data = load_json(temp_path)
+        os.remove(temp_path)
+
+        if not shared_facilities_exist(base_data, test_data):
+            comparison_results[fname] = "⚠️ No shared facilities between base and test file. Skipping comparison."
+            change_lists.append([])
+            continue
 
         _prepare_mappings(base_data, test_data)
 
-        if not shared_facilities_exist(base_data, test_data):
-            comparison_results[
-                fname] = "⚠️ No shared facility names between base and test file. Likely wrong model — comparison skipped."
-            continue
-
         diff = DeepDiff(base_data, test_data, verbose_level=2)
+
         lines = []
         describe_change.counter = 1
         for path, change in diff.get('values_changed', {}).items():
             if not is_ignored_path(path):
-                lines.append(describe_change(path, change))
-                describe_change.counter += 1
+                desc = describe_change(path, change)
+                if desc:
+                    lines.append(desc)
+                    describe_change.counter += 1
 
         describe_add_remove.counter = describe_change.counter - 1
         for path, value in diff.get('iterable_item_added', {}).items():
@@ -370,10 +393,27 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
                 lines.append(desc)
                 describe_add_remove.counter += 1
 
-        result = "\n\n".join([str(l) for l in lines if l]) if lines else "✅ Only differences in ignored fields. No meaningful changes."
-        comparison_results[fname] = result
+        str_lines = [str(l) for l in lines if l]
+        change_lists.append(str_lines)
+
+        comparison_results[fname] = "\n\n".join(str_lines) if str_lines else "✅ Only differences in ignored fields. No meaningful changes."
+
+    # === AFTER ALL FILES PROCESSED: Check similarity between test files ===
+    for i in range(len(change_lists)):
+        for j in range(i + 1, len(change_lists)):
+            set_i = set(change_lists[i])
+            set_j = set(change_lists[j])
+            if not set_i or not set_j:
+                continue
+            overlap = len(set_i & set_j) / max(len(set_i), len(set_j))
+            if overlap >= 0.9:
+                warning = f"🚨 Warning: '{uploaded_filenames[i]}' and '{uploaded_filenames[j]}' are {round(overlap * 100)}% similar in their changes."
+                for fname in (uploaded_filenames[i], uploaded_filenames[j]):
+                    comparison_results[fname] = warning + "\n\n" + comparison_results.get(fname, "")
 
     return [{'label': f, 'value': f} for f in uploaded_filenames], uploaded_filenames[0]
+
+
 
 # === CALLBACK: Show comparison results for selected file ===
 @app.callback(
