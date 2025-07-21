@@ -111,7 +111,7 @@ def describe_change(path, change):
         return f"{describe_change.counter}. Daily Rent Cost changed at facility item in '{facility_name}':\n   - From: {from_val}\n   - To:   {to_val}"
     if "['opt_cost']" in path:
         return f"{describe_change.counter}. Daily Operating Cost changed at facility item in '{facility_name}':\n   - From: {from_val}\n   - To:   {to_val}"
-    if facility_match and path.endswith("['attrs']['name']") and path.startswith("root['facilities']"):
+    if facility_match and path.endswith("['attrs']['name']") and path.startswith("root['facilities']") and "['vehicles']" not in path:
         return f"{describe_change.counter}. Facility Name changed at facility item in '{facility_name}':\n   - From: {from_val}\n   - To:   {to_val}"
 
     # Vehicle changes
