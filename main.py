@@ -405,7 +405,7 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
             if not set_i or not set_j:
                 continue
             overlap = len(set_i & set_j) / max(len(set_i), len(set_j))
-            if overlap >= 0.9:
+            if overlap >= 0.7:
                 warning = f"🚨 Warning: '{uploaded_filenames[i]}' and '{uploaded_filenames[j]}' are {round(overlap * 100)}% similar in their changes."
                 for fname in (uploaded_filenames[i], uploaded_filenames[j]):
                     comparison_results[fname] = warning + "\n\n" + comparison_results.get(fname, "")
