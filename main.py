@@ -54,10 +54,6 @@ def get_facility_name_by_geo(geo):
 def get_vehicle_name_by_fac_index(fac_index, veh_index):
     return VEHICLE_NAMES_BY_PATH.get((fac_index, veh_index), f"Vehicle ({fac_index},{veh_index})")
 
-# === Describes value changes (edits) ===
-def describe_change(path, change):
-    from_val = change.get('old_value')
-    to_val = change.get('new_value')
 
 # compare uploaded files to each other
 def compare_change_lists(change_lists, filenames, threshold=0.9):
@@ -76,6 +72,9 @@ def compare_change_lists(change_lists, filenames, threshold=0.9):
     return warnings
 
     # Detect indices for context
+def describe_change(path, change, test_data):
+    from_val = change.get('old_value')
+    to_val = change.get('new_value')
     facility_match = re.search(r"\['facilities'\]\[(\d+)\]", path)
     vehicle_match = re.search(r"\['vehicles'\]\[(\d+)\]", path)
     product_match = re.search(r"\['products'\]\[(\d+)\]", path)
@@ -165,7 +164,7 @@ def compare_change_lists(change_lists, filenames, threshold=0.9):
     return f"{describe_change.counter}. Change at {path}:\n   - From: {from_val}\n   - To:   {to_val}"
 
 # === Describes item additions/removals (not just changes) ===
-def describe_add_remove(path, value, is_addition):
+def describe_add_remove(path, value, test_data, is_addition):
     stop_match = re.search(r"\['stops'\]\[(\d+)\]", path)
     vehicle_match = re.search(r"\['vehicles'\]\[(\d+)\]", path)
     facility_match = re.search(r"\['facilities'\]\[(\d+)\]", path)
@@ -354,6 +353,7 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
     change_lists = []
 
     for content, fname in zip(uploaded_contents, uploaded_filenames):
+        describe_change.counter = 1
         content_string = content.split(',')[1]
         decoded = base64.b64decode(content_string)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
@@ -373,22 +373,21 @@ def compare_multiple_files(n_clicks, base_file, stored_testfiles):
         diff = DeepDiff(base_data, test_data, verbose_level=2)
 
         lines = []
-        describe_change.counter = 1
         for path, change in diff.get('values_changed', {}).items():
             if not is_ignored_path(path):
-                desc = describe_change(path, change)
+                desc = describe_change(path, change, test_data)
+                describe_change.counter += 1  # Always increment, even if skipped
                 if desc:
                     lines.append(desc)
-                    describe_change.counter += 1
 
         describe_add_remove.counter = describe_change.counter - 1
         for path, value in diff.get('iterable_item_added', {}).items():
-            desc = describe_add_remove(path, value, is_addition=True)
+            desc = describe_add_remove(path, value, test_data, is_addition=True)
             if desc:
                 lines.append(desc)
                 describe_add_remove.counter += 1
         for path, value in diff.get('iterable_item_removed', {}).items():
-            desc = describe_add_remove(path, value, is_addition=False)
+            desc = describe_add_remove(path, value, test_data, is_addition=False)
             if desc:
                 lines.append(desc)
                 describe_add_remove.counter += 1
